@@ -2,15 +2,19 @@ use std::{cell::RefCell, time::Instant};
 
 use windows::{
     Win32::{
-        Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, RECT, WPARAM}, System::LibraryLoader::GetModuleHandleW, UI::{
-            Input::KeyboardAndMouse::{VIRTUAL_KEY, VK_ESCAPE, VK_R, VK_SPACE}, WindowsAndMessaging::{
+        Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, RECT, WPARAM},
+        System::LibraryLoader::GetModuleHandleW,
+        UI::{
+            Input::KeyboardAndMouse::{VIRTUAL_KEY, VK_ESCAPE, VK_R, VK_SPACE},
+            WindowsAndMessaging::{
                 CW_USEDEFAULT, CreateWindowExW, DefWindowProcW, DispatchMessageW, GetClientRect,
                 IDC_ARROW, LoadCursorW, MSG, PM_REMOVE, PeekMessageW, PostQuitMessage,
                 RegisterClassW, TranslateMessage, WINDOW_EX_STYLE, WM_DESTROY, WM_KEYDOWN, WM_QUIT,
                 WM_SIZE, WNDCLASSW, WS_OVERLAPPEDWINDOW, WS_VISIBLE,
             },
         },
-    }, core::{Result, w},
+    },
+    core::{Result, w},
 };
 
 use crate::gfx::Gfx;
@@ -19,13 +23,13 @@ thread_local! {
     static GFX: RefCell<Option<Gfx>> = const { RefCell::new(None) };
 }
 
-pub fn run_window() -> Result<()> {
+pub fn run_dev() -> Result<()> {
     unsafe {
         let hinstance: HINSTANCE = GetModuleHandleW(None)?.into();
         let class = w!("LiquidClockWnd");
 
         let wc = WNDCLASSW {
-            lpfnWndProc: Some(wndproc),
+            lpfnWndProc: Some(dev_wndproc),
             hInstance: hinstance,
             lpszClassName: class,
             hCursor: LoadCursorW(None, IDC_ARROW)?,
@@ -83,7 +87,7 @@ pub fn run_window() -> Result<()> {
     Ok(())
 }
 
-extern "system" fn wndproc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) -> LRESULT {
+extern "system" fn dev_wndproc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) -> LRESULT {
     unsafe {
         match msg {
             WM_SIZE => {
