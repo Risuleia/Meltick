@@ -19,7 +19,7 @@ pub fn run_config(parent: Option<HWND>, config: Config) -> Result<()> {
     unsafe {
         let instance = GetModuleHandleW(None)?.into();
 
-        let class_name = w!("LiquidGlassConfigWindow");
+        let class_name = w!("MeltickConfigWindow");
 
         let wc = WNDCLASSW {
             style: CS_HREDRAW | CS_VREDRAW,
@@ -35,7 +35,7 @@ pub fn run_config(parent: Option<HWND>, config: Config) -> Result<()> {
         let hwnd = CreateWindowExW(
             WINDOW_EX_STYLE::default(),
             class_name,
-            w!("Liquid Glass Clock Screensaver"),
+            w!("Meltick Screensaver"),
             WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
             CW_USEDEFAULT,
             CW_USEDEFAULT,

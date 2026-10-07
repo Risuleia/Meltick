@@ -26,7 +26,7 @@ thread_local! {
 pub fn run_dev() -> Result<()> {
     unsafe {
         let hinstance: HINSTANCE = GetModuleHandleW(None)?.into();
-        let class = w!("LiquidClockWnd");
+        let class = w!("MeltickWnd");
 
         let wc = WNDCLASSW {
             lpfnWndProc: Some(dev_wndproc),
@@ -41,7 +41,7 @@ pub fn run_dev() -> Result<()> {
         let hwnd = CreateWindowExW(
             WINDOW_EX_STYLE(0),
             class,
-            w!("liquid clock"),
+            w!("meltick"),
             WS_OVERLAPPEDWINDOW | WS_VISIBLE,
             CW_USEDEFAULT,
             CW_USEDEFAULT,

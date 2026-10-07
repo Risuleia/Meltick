@@ -3,7 +3,7 @@
 version = 4
 
 [[package]]
-name = "liquid-clock"
+name = "meltick"
 version = "0.1.0"
 dependencies = [
  "windows",

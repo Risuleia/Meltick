@@ -40,7 +40,7 @@ pub fn run_screensaver(config: Config) -> Result<()> {
 
     let hinstance = HINSTANCE(module.0);
 
-    let class_name = windows::core::w!("LiquidGlassScreenSaverWindow");
+    let class_name = windows::core::w!("MelticScreenSaverWindow");
 
     let wc = WNDCLASSW {
         hInstance: hinstance,
@@ -80,7 +80,7 @@ pub fn run_screensaver(config: Config) -> Result<()> {
             CreateWindowExW(
                 WS_EX_TOPMOST | WS_EX_TOOLWINDOW,
                 class_name,
-                windows::core::w!("Liquid Glass Clock"),
+                windows::core::w!("Meltic Clock"),
                 WS_POPUP,
                 rect.left,
                 rect.top,

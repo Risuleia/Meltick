@@ -33,7 +33,7 @@ pub fn run_preview(parent: HWND, config: Config) -> Result<()> {
             return Ok(());
         }
 
-        let class_name = w!("LiquidGlassPreviewWindow");
+        let class_name = w!("MelticPreviewWindow");
 
         let instance = GetModuleHandleW(None)?.into();
 
@@ -58,7 +58,7 @@ pub fn run_preview(parent: HWND, config: Config) -> Result<()> {
         let hwnd = CreateWindowExW(
             WINDOW_EX_STYLE::default(),
             class_name,
-            w!("Liquid Glass Preview"),
+            w!("Meltick Preview"),
             WS_CHILD | WS_VISIBLE,
             0,
             0,
