@@ -8,7 +8,7 @@ use windows::{
 
 use crate::util::{read_dword, write_dword};
 
-const REGISTRY_PATH: windows::core::PCWSTR = w!("Software\\Liqu1idGlassClock");
+const REGISTRY_PATH: windows::core::PCWSTR = w!("Software\\MeltickClock");
 
 const VALUE_TIME_FORMAT: windows::core::PCWSTR = w!("TimeFormat");
 
@@ -37,10 +37,10 @@ impl Default for Config {
 
 impl Config {
     pub const MIN_SCALE: f32 = 0.50;
-    pub const MAX_SCALE: f32 = 1.50;
+    pub const MAX_SCALE: f32 = 1.25;
 
     pub fn validate(&mut self) {
-        self.scale = self.scale.clamp(Self::MAX_SCALE, Self::MAX_SCALE);
+        self.scale = self.scale.clamp(Self::MIN_SCALE, Self::MAX_SCALE);
     }
 
     pub fn load() -> Self {

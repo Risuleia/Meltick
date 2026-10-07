@@ -570,6 +570,34 @@ impl Gfx {
         }
     }
 
+    pub fn set_config(&mut self, config: Config) {
+        self.config = config;
+
+        let new_clock = ClockDigits::now(self.config.time_format);
+
+        self.clock = new_clock;
+
+        self.cards[0].digit_a.current = new_clock.digits[0];
+        self.cards[0].digit_a.next = new_clock.digits[0];
+        self.cards[0].digit_a.progress = 0.0;
+        self.cards[0].digit_a.active = false;
+
+        self.cards[0].digit_b.current = new_clock.digits[1];
+        self.cards[0].digit_b.next = new_clock.digits[1];
+        self.cards[0].digit_b.progress = 0.0;
+        self.cards[0].digit_b.active = false;
+
+        self.cards[1].digit_a.current = new_clock.digits[2];
+        self.cards[1].digit_a.next = new_clock.digits[2];
+        self.cards[1].digit_a.progress = 0.0;
+        self.cards[1].digit_a.active = false;
+
+        self.cards[1].digit_b.current = new_clock.digits[3];
+        self.cards[1].digit_b.next = new_clock.digits[3];
+        self.cards[1].digit_b.progress = 0.0;
+        self.cards[1].digit_b.active = false;
+    }
+
     pub fn resize(&mut self, w: u32, h: u32) -> Result<()> {
         unsafe {
             // release every reference to the swapchain buffer before ResizeBuffers
