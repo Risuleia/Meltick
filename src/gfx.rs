@@ -1,9 +1,9 @@
-use std::{ffi::c_void, path::Path};
+use std::ffi::c_void;
 use windows::{
     Win32::{
         Foundation::*,
         Graphics::{
-            Direct3D::{Fxc::*, *},
+            Direct3D::*,
             Direct3D11::*,
             Dxgi::{Common::*, *},
         },
@@ -16,6 +16,11 @@ use crate::{
     config::{Config, TimeFormat},
     spring::Spring,
 };
+
+const VS_BYTECODE: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/fullscreen_vs.cso"));
+const BG_PS_BYTECODE: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/bg_ps.cso"));
+const GLASS_PS_BYTECODE: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/glass_ps.cso"));
+const DIGITS_PS_BYTECODE: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/digits_ps.cso"));
 
 const IMPULSE_TOP: f32 = 1400.0; // px/s kick on the leading (top) edge
 const IMPULSE_BOT: f32 = 700.0; // px/s kick on the trailing (bottom) edge
@@ -30,6 +35,10 @@ const CARD_GAP_FRAC: f32 = 0.083;
 
 const ROLL_GLASS_IMPULSE: f32 = 500.0;
 const DIGIT_ROLL_SPEED: f32 = 4.0;
+
+const DRIFT_AMPLITUDE: f32 = 8.0;
+const DRIFT_PERIOD: f32 = 300.0;
+const DRIFT_Y_RATIO: f32 = 0.73;
 
 #[repr(C)]
 struct BgParams {
@@ -171,82 +180,6 @@ pub struct Gfx {
     h: u32,
 }
 
-fn load_shader_source(path: &Path) -> Result<String> {
-    let source = std::fs::read_to_string(path)
-        .map_err(|e| Error::new(E_FAIL, format!("{}: {e}", path.display())))?;
-
-    let mut output = String::with_capacity(source.len());
-
-    for line in source.lines() {
-        let trimmed = line.trim();
-
-        if let Some(rest) = trimmed.strip_prefix("#include") {
-            let rest = rest.trim();
-
-            if rest.starts_with('"') && rest.ends_with('"') {
-                let include_name = &rest[1..rest.len() - 1];
-
-                let parent = path.parent().unwrap_or_else(|| Path::new("."));
-                let include_path = parent.join(include_name);
-
-                let included_source = load_shader_source(&include_path)?;
-
-                output.push_str(&included_source);
-                output.push('\n');
-
-                continue;
-            }
-        }
-
-        output.push_str(line);
-        output.push('\n');
-    }
-
-    Ok(output)
-}
-
-fn compile(path: &str, target: PCSTR) -> Result<Vec<u8>> {
-    let source = load_shader_source(Path::new(path))?;
-
-    unsafe {
-        let mut code: Option<ID3DBlob> = None;
-        let mut errs: Option<ID3DBlob> = None;
-
-        let hr = D3DCompile(
-            source.as_ptr() as *const c_void,
-            source.len(),
-            PCSTR::null(),
-            None,
-            None,
-            s!("main"),
-            target,
-            0,
-            0,
-            &mut code,
-            Some(&mut errs),
-        );
-
-        if let Err(e) = hr {
-            let msg = errs
-                .map(|b| {
-                    String::from_utf8_lossy(std::slice::from_raw_parts(
-                        b.GetBufferPointer() as *const u8,
-                        b.GetBufferSize(),
-                    ))
-                    .into_owned()
-                })
-                .unwrap_or_default();
-
-            return Err(Error::new(e.code(), format!("{}\n{}", path, msg)));
-        }
-
-        let b = code.unwrap();
-
-        Ok(std::slice::from_raw_parts(b.GetBufferPointer() as *const u8, b.GetBufferSize())
-            .to_vec())
-    }
-}
-
 fn make_digit_atlas(device: &ID3D11Device) -> Result<ID3D11ShaderResourceView> {
     const ATLAS_W: u32 = 7200;
     const ATLAS_H: u32 = 1792;
@@ -332,19 +265,17 @@ fn make_ampm_atlas(device: &ID3D11Device) -> Result<ID3D11ShaderResourceView> {
 fn make_shaders(
     device: &ID3D11Device,
 ) -> Result<(ID3D11VertexShader, ID3D11PixelShader, ID3D11PixelShader, ID3D11PixelShader)> {
-    let vs_bc = compile("shaders/fullscreen.hlsl", s!("vs_5_0"))?;
-    let bg_bc = compile("shaders/bg.hlsl", s!("ps_5_0"))?;
-    let gl_bc = compile("shaders/glass.hlsl", s!("ps_5_0"))?;
-    let digits_bc = compile("shaders/digits.hlsl", s!("ps_5_0"))?;
     unsafe {
         let mut vs = None;
         let mut bg = None;
         let mut gl = None;
         let mut digits = None;
-        device.CreateVertexShader(&vs_bc, None, Some(&mut vs))?;
-        device.CreatePixelShader(&bg_bc, None, Some(&mut bg))?;
-        device.CreatePixelShader(&gl_bc, None, Some(&mut gl))?;
-        device.CreatePixelShader(&digits_bc, None, Some(&mut digits))?;
+
+        device.CreateVertexShader(VS_BYTECODE, None, Some(&mut vs))?;
+        device.CreatePixelShader(BG_PS_BYTECODE, None, Some(&mut bg))?;
+        device.CreatePixelShader(GLASS_PS_BYTECODE, None, Some(&mut gl))?;
+        device.CreatePixelShader(DIGITS_PS_BYTECODE, None, Some(&mut digits))?;
+
         Ok((vs.unwrap(), bg.unwrap(), gl.unwrap(), digits.unwrap()))
     }
 }
@@ -531,15 +462,6 @@ impl Gfx {
         }
     }
 
-    pub fn reload_shaders(&mut self) -> Result<()> {
-        let (vs, bg, gl, digits) = make_shaders(&self.device)?; // old shaders stay on failure
-        self.vs = vs;
-        self.bg_ps = bg;
-        self.glass_ps = gl;
-        self.digits_ps = digits;
-        Ok(())
-    }
-
     /// Debug tick: content moves up, top edge leads, bottom edge lags.
     pub fn tick(&mut self) {
         for card in &mut self.cards {
@@ -662,6 +584,11 @@ impl Gfx {
 
         let (sw, sh) = (self.w as f32, self.h as f32);
 
+        let drift_phase = time * std::f32::consts::TAU / DRIFT_PERIOD;
+
+        let drift_x = drift_phase.sin() * DRIFT_AMPLITUDE;
+        let drift_y = (drift_phase * DRIFT_Y_RATIO).sin() * DRIFT_AMPLITUDE;
+
         let scale = self.config.scale.clamp(Config::MIN_SCALE, Config::MAX_SCALE);
 
         let base_card_size = (sw.min(sh) * CARD_SIZE_FRAC).max(120.0);
@@ -675,16 +602,15 @@ impl Gfx {
         let gap = card_size * CARD_GAP_FRAC;
 
         let group_w = card_w * 2.0 + gap;
-        let group_left = (sw - group_w) * 0.5;
+        let group_left = (sw - group_w) * 0.5 + drift_x;
 
         let mut card_geometry = [[0.0f32; 4]; 2];
 
         for (index, card) in self.cards.iter().enumerate() {
             let center_x = group_left + card_w * 0.5 + index as f32 * (card_w + gap);
 
-            let top_y = sh * 0.5 - base_h * 0.5 - card.top.x;
-
-            let bot_y = sh * 0.5 + base_h * 0.5 - card.bot.x;
+            let top_y = sh * 0.5 - base_h * 0.5 + drift_y - card.top.x;
+            let bot_y = sh * 0.5 + base_h * 0.5 + drift_y - card.bot.x;
 
             let h = (bot_y - top_y).max(40.0);
 

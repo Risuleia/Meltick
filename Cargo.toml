@@ -7,7 +7,6 @@ repository = "https://github.com/Risuleia/Meltick"
 homepage = "https://github.com/Risuleia/Meltick"
 description = "Odometer-style clock screensaver incorporated with Liquid Glass"
 license = "MIT"
-license-file = "LICENSE"
 
 [[bin]]
 name = "Meltick"
@@ -36,3 +35,9 @@ windows = { version = "0.62.2", features = [
 
 [build-dependencies]
 winresource = "0.1"
+
+[target.'cfg(windows)'.build-dependencies]
+windows = { version = "0.62.2", features = [
+    "Win32_Graphics_Direct3D",
+    "Win32_Graphics_Direct3D_Fxc",
+] }

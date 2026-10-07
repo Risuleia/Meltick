@@ -5,7 +5,7 @@ use windows::{
         Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, RECT, WPARAM},
         System::LibraryLoader::GetModuleHandleW,
         UI::{
-            Input::KeyboardAndMouse::{VIRTUAL_KEY, VK_ESCAPE, VK_R, VK_SPACE},
+            Input::KeyboardAndMouse::{VIRTUAL_KEY, VK_ESCAPE, VK_SPACE},
             WindowsAndMessaging::{
                 CW_USEDEFAULT, CreateWindowExW, DefWindowProcW, DispatchMessageW, GetClientRect,
                 IDC_ARROW, LoadCursorW, MSG, PM_REMOVE, PeekMessageW, PostQuitMessage,
@@ -122,18 +122,8 @@ extern "system" fn dev_wndproc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) -> 
                             }
                         }
                     });
-                } else if vk == VK_R {
-                    GFX.with(|g| {
-                        if let Ok(mut b) = g.try_borrow_mut() {
-                            if let Some(gfx) = b.as_mut() {
-                                match gfx.reload_shaders() {
-                                    Ok(()) => eprintln!("shaders reloaded"),
-                                    Err(e) => eprintln!("shader error: {e}"),
-                                }
-                            }
-                        }
-                    });
                 }
+
                 LRESULT(0)
             }
 
