@@ -24,7 +24,7 @@ const TOP_C: f32 = 13.0; // damping: lower = more wobble
 const BOT_K: f32 = 140.0; // softer spring => bottom lags behind the top
 const BOT_C: f32 = 11.0;
 
-const CARD_SIZE_FRAC: f32 = 0.67;
+const CARD_SIZE_FRAC: f32 = 0.62;
 const CARD_RADIUS_FRAC: f32 = 0.12;
 const CARD_GAP_FRAC: f32 = 0.083;
 
