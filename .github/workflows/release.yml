@@ -53,17 +53,24 @@ jobs:
         run: .\build-scr.ps1
 
       - name: Verify screensaver exists
-        shell: bash
+        shell: pwsh
         run: |
-          if [ ! -f "dist/Meltick.scr" ]; then
-            echo "Meltick.scr not found"
+          $artifact = Join-Path $env:GITHUB_WORKSPACE "dist\Meltick.scr"
+
+          if (-not (Test-Path -LiteralPath $artifact -PathType Leaf)) {
+            Write-Error "Meltick.scr not found at $artifact"
             exit 1
-          fi
+          }
+
+          $file = Get-Item -LiteralPath $artifact
+
+          Write-Host "Found: $($file.FullName)"
+          Write-Host ("Size: {0:N2} MB" -f ($file.Length / 1MB))
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           name: Meltick v${{ steps.version.outputs.VERSION }}
-          files: dist/Meltick.scr
+          files: ${{ github.workspace }}/dist/Meltick.scr
           generate_release_notes: true
           prerelease: ${{ contains(github.ref_name, '-') }}
