@@ -19,7 +19,7 @@ if (Test-Path $dist) {
 
 New-Item -ItemType Directory -Path $dist | Out-Null
 
-$exe = Join-Path $PSScriptRoot "..\target\release\Meltick.exe"
+$exe = Join-Path $PSScriptRoot ".\target\release\Meltick.exe"
 $scr = Join-Path $dist "Meltick.scr"
 
 if (-not (Test-Path $exe)) {
