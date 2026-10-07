@@ -4,8 +4,8 @@ use windows::{
         System::LibraryLoader::GetModuleHandleW,
         UI::WindowsAndMessaging::{
             CREATESTRUCTW, CS_HREDRAW, CS_VREDRAW, CreateWindowExW, DefWindowProcW,
-            DispatchMessageW, GWLP_USERDATA, GetClientRect, GetWindowLongPtrW, HCURSOR, MSG,
-            PM_REMOVE, PeekMessageW, RegisterClassW, SetWindowLongPtrW, TranslateMessage,
+            DispatchMessageW, GWLP_USERDATA, GetClientRect, GetWindowLongPtrW, HCURSOR, IsWindow,
+            MSG, PM_REMOVE, PeekMessageW, RegisterClassW, SetWindowLongPtrW, TranslateMessage,
             WINDOW_EX_STYLE, WM_ERASEBKGND, WM_NCCREATE, WM_NCDESTROY, WM_QUIT, WM_SIZE, WNDCLASSW,
             WS_CHILD, WS_VISIBLE,
         },
@@ -77,15 +77,23 @@ pub fn run_preview(parent: HWND, config: Config) -> Result<()> {
         let start = std::time::Instant::now();
 
         loop {
+            if !IsWindow(Some(parent)).as_bool() {
+                break;
+            }
+
             let mut msg = MSG::default();
 
             while PeekMessageW(&mut msg, None, 0, 0, PM_REMOVE).as_bool() {
                 if msg.message == WM_QUIT {
-                    return Ok(());
+                    break;
                 }
 
                 let _ = TranslateMessage(&msg);
                 DispatchMessageW(&msg);
+            }
+
+            if !IsWindow(Some(parent)).as_bool() {
+                break;
             }
 
             let t = start.elapsed().as_secs_f32();
@@ -94,6 +102,8 @@ pub fn run_preview(parent: HWND, config: Config) -> Result<()> {
                 gfx.render(t)?;
             }
         }
+
+        Ok(())
     }
 }
 

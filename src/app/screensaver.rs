@@ -2,15 +2,19 @@ use std::time::Instant;
 
 use windows::{
     Win32::{
-        Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, POINT, WPARAM},
-        System::LibraryLoader::GetModuleHandleW,
+        Foundation::{
+            ERROR_ALREADY_EXISTS, GetLastError, HINSTANCE, HWND, LPARAM, LRESULT, POINT, WPARAM,
+        },
+        Graphics::Gdi::SC_SCREENSAVE,
+        System::{LibraryLoader::GetModuleHandleW, Threading::CreateMutexW},
         UI::WindowsAndMessaging::{
             CREATESTRUCTW, CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW,
             GWLP_USERDATA, GetCursorPos, GetWindowLongPtrW, MSG, PM_REMOVE, PeekMessageW,
-            PostQuitMessage, RegisterClassW, SW_SHOW, SetCursor, SetWindowLongPtrW, ShowWindow,
-            TranslateMessage, WM_KEYDOWN, WM_LBUTTONDOWN, WM_MBUTTONDOWN, WM_MOUSEHWHEEL,
-            WM_MOUSEMOVE, WM_MOUSEWHEEL, WM_NCCREATE, WM_NCDESTROY, WM_RBUTTONDOWN, WM_SETCURSOR,
-            WM_SYSKEYDOWN, WM_XBUTTONDOWN, WNDCLASSW, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_POPUP,
+            PostQuitMessage, RegisterClassW, SC_CLOSE, SW_SHOW, SetCursor, SetWindowLongPtrW,
+            ShowWindow, TranslateMessage, WM_ACTIVATEAPP, WM_CLOSE, WM_DESTROY, WM_KEYDOWN,
+            WM_LBUTTONDOWN, WM_MBUTTONDOWN, WM_MOUSEHWHEEL, WM_MOUSEMOVE, WM_MOUSEWHEEL,
+            WM_NCCREATE, WM_NCDESTROY, WM_RBUTTONDOWN, WM_SETCURSOR, WM_SYSCOMMAND, WM_SYSKEYDOWN,
+            WM_XBUTTONDOWN, WNDCLASSW, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_POPUP,
         },
     },
     core::Result,
@@ -27,6 +31,12 @@ struct ScreenSaverWindow {
 }
 
 pub fn run_screensaver(config: Config) -> Result<()> {
+    let _mutex =
+        unsafe { CreateMutexW(None, true, windows::core::w!("Local\\MeltickScreenSaver"))? };
+    if unsafe { GetLastError() } == ERROR_ALREADY_EXISTS {
+        return Ok(());
+    }
+
     let monitors = enumerate_monitors()?;
 
     if monitors.is_empty() {
@@ -197,6 +207,25 @@ unsafe extern "system" fn screensaver_wndproc(
             WM_SETCURSOR => {
                 SetCursor(None);
                 return LRESULT(1);
+            }
+
+            WM_ACTIVATEAPP => {
+                if wparam.0 == 0 && !cfg!(debug_assertions) {
+                    PostQuitMessage(0);
+                }
+                return LRESULT(0);
+            }
+
+            WM_CLOSE | WM_DESTROY => {
+                PostQuitMessage(0);
+                return LRESULT(0);
+            }
+
+            WM_SYSCOMMAND => {
+                let cmd = (wparam.0 & 0xFFF0) as u32;
+                if cmd == SC_SCREENSAVE || cmd == SC_CLOSE {
+                    return LRESULT(0);
+                }
             }
 
             _ => {}

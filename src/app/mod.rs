@@ -18,45 +18,47 @@ pub enum ScreenSaverMode {
     ScreenSaver,
     Preview(HWND),
     Configure(Option<HWND>),
+    Exit, // bad args: do nothing
 }
 
 pub fn parse_screen_saver_mode() -> ScreenSaverMode {
-    let mut args = std::env::args_os();
-    let _program = args.next();
+    let mut args = std::env::args_os().skip(1);
 
     let Some(first) = args.next() else {
-        return ScreenSaverMode::Dev;
+        return if cfg!(debug_assertions) {
+            ScreenSaverMode::Dev
+        } else {
+            ScreenSaverMode::Configure(None)
+        };
     };
 
     let first = first.to_string_lossy().to_ascii_lowercase();
+    if first == "--dev" {
+        return ScreenSaverMode::Dev;
+    }
 
-    match first.as_str() {
-        "/s" | "-s" => ScreenSaverMode::ScreenSaver,
-        "/p" | "-p" => {
-            let Some(value) = args.next() else {
-                eprintln!("screensaver: /p requires window handle");
-                return ScreenSaverMode::Dev;
-            };
+    // accept "/s", "-s", "/c:123", "/p 123", "/P:123", ...
+    let flag = first.trim_start_matches(['/', '-']);
+    let (cmd, inline) = match flag.split_once(':') {
+        Some((c, v)) => (c, Some(v.to_string())),
+        None => (flag, None),
+    };
 
-            match parse_hwnd(&value.to_string_lossy()) {
-                Some(hwnd) => ScreenSaverMode::Preview(hwnd),
-                None => {
-                    eprintln!(
-                        "screensaver: invalid preview window handle: {}",
-                        value.to_string_lossy()
-                    );
+    // handle comes either after the colon or as the next arg
+    let mut handle = || {
+        inline
+            .clone()
+            .or_else(|| args.next().map(|v| v.to_string_lossy().into_owned()))
+            .and_then(|v| parse_hwnd(&v))
+    };
 
-                    ScreenSaverMode::Dev
-                }
-            }
-        }
-
-        "/c" | "-c" => {
-            let hwnd = args.next().and_then(|value| parse_hwnd(&value.to_string_lossy()));
-
-            ScreenSaverMode::Configure(hwnd)
-        }
-
-        _ => ScreenSaverMode::Dev,
+    match cmd {
+        "s" => ScreenSaverMode::ScreenSaver,
+        "p" => match handle() {
+            Some(hwnd) => ScreenSaverMode::Preview(hwnd),
+            None => ScreenSaverMode::Exit,
+        },
+        "c" => ScreenSaverMode::Configure(handle()),
+        _ => ScreenSaverMode::Exit,
     }
 }

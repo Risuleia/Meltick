@@ -21,6 +21,7 @@ const VS_BYTECODE: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/fullscreen_
 const BG_PS_BYTECODE: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/bg_ps.cso"));
 const GLASS_PS_BYTECODE: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/glass_ps.cso"));
 const DIGITS_PS_BYTECODE: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/digits_ps.cso"));
+const BLIT_PS_BYTECODE: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/blit_ps.cso"));
 
 const IMPULSE_TOP: f32 = 1400.0; // px/s kick on the leading (top) edge
 const IMPULSE_BOT: f32 = 700.0; // px/s kick on the trailing (bottom) edge
@@ -164,6 +165,8 @@ pub struct Gfx {
     bg_ps: ID3D11PixelShader,
     glass_ps: ID3D11PixelShader,
     digits_ps: ID3D11PixelShader,
+    blit_ps: ID3D11PixelShader,
+    digits_cb: ID3D11Buffer,
 
     bg_cb: ID3D11Buffer,
     glass_cb: ID3D11Buffer,
@@ -288,12 +291,13 @@ fn make_bg_target(
     let desc = D3D11_TEXTURE2D_DESC {
         Width: w,
         Height: h,
-        MipLevels: 1,
+        MipLevels: 0,
         ArraySize: 1,
         Format: DXGI_FORMAT_B8G8R8A8_UNORM,
         SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0 },
         Usage: D3D11_USAGE_DEFAULT,
         BindFlags: (D3D11_BIND_RENDER_TARGET.0 | D3D11_BIND_SHADER_RESOURCE.0) as u32,
+        MiscFlags: D3D11_RESOURCE_MISC_GENERATE_MIPS.0 as u32,
         ..Default::default()
     };
     unsafe {
@@ -409,8 +413,11 @@ impl Gfx {
             let mut bb_rtv = None;
             device.CreateRenderTargetView(&backbuffer, None, Some(&mut bb_rtv))?;
 
-            let (bg_tex, bg_rtv, bg_srv) = make_bg_target(&device, w, h)?;
+            let (bg_tex, bg_rtv, bg_srv) = make_bg_target(&device, (w / 2).max(1), (h / 2).max(1))?;
             let (vs, bg_ps, glass_ps, digits_ps) = make_shaders(&device)?;
+            let mut blit_ps = None;
+            device.CreatePixelShader(BLIT_PS_BYTECODE, None, Some(&mut blit_ps))?;
+            let digits_cb = make_cbuffer(&device, std::mem::size_of::<BgParams>())?;
             let digit_atlas = make_digit_atlas(&device)?;
             let digits_blend = make_digits_blend_state(&device)?;
             let ampm_atlas = make_ampm_atlas(&device)?;
@@ -446,6 +453,8 @@ impl Gfx {
                 bg_ps,
                 glass_ps,
                 digits_ps,
+                blit_ps: blit_ps.unwrap(),
+                digits_cb,
                 bg_cb,
                 glass_cb,
                 sampler: sampler.unwrap(),
@@ -513,7 +522,7 @@ impl Gfx {
             self.backbuffer = Some(bb);
             self.bb_rtv = rtv;
 
-            let (t, r, s) = make_bg_target(&self.device, w, h)?;
+            let (t, r, s) = make_bg_target(&self.device, (w / 2).max(1), (h / 2).max(1))?;
             self.bg_tex = t;
             self.bg_rtv = r;
             self.bg_srv = s;
@@ -572,6 +581,27 @@ impl Gfx {
         self.clock = new_clock;
     }
 
+    fn bg_params(&self, s: f32, time: f32, geo: &[[f32; 4]; 2]) -> BgParams {
+        let sc = |c: [f32; 4]| [c[0] * s, c[1] * s, c[2] * s, c[3] * s];
+        let roll = |d: &DigitRoll| {
+            [d.current as f32, d.next as f32, d.progress, if d.active { 1.0 } else { 0.0 }]
+        };
+        BgParams {
+            resolution: [self.w as f32 * s, self.h as f32 * s],
+            time,
+            _pad: 0.0,
+            card0: sc(geo[0]),
+            card1: sc(geo[1]),
+            roll0_a: roll(&self.cards[0].digit_a),
+            roll0_b: roll(&self.cards[0].digit_b),
+            roll1_a: roll(&self.cards[1].digit_a),
+            roll1_b: roll(&self.cards[1].digit_b),
+            ampm_visible: if self.config.time_format == TimeFormat::H12 { 1.0 } else { 0.0 },
+            is_pm: if self.clock.is_pm { 1.0 } else { 0.0 },
+            _ampm_pad: [0.0, 0.0],
+        }
+    }
+
     pub fn render(&mut self, time: f32) -> Result<()> {
         let dt = (time - self.last_t).clamp(0.0, 0.05);
         self.last_t = time;
@@ -622,56 +652,10 @@ impl Gfx {
         }
 
         unsafe {
-            write_cbuffer(
-                &self.ctx,
-                &self.bg_cb,
-                BgParams {
-                    resolution: [sw, sh],
-                    time,
-                    _pad: 0.0,
-
-                    card0: card_geometry[0],
-                    card1: card_geometry[1],
-
-                    roll0_a: [
-                        self.cards[0].digit_a.current as f32,
-                        self.cards[0].digit_a.next as f32,
-                        self.cards[0].digit_a.progress,
-                        if self.cards[0].digit_a.active { 1.0 } else { 0.0 },
-                    ],
-
-                    roll0_b: [
-                        self.cards[0].digit_b.current as f32,
-                        self.cards[0].digit_b.next as f32,
-                        self.cards[0].digit_b.progress,
-                        if self.cards[0].digit_b.active { 1.0 } else { 0.0 },
-                    ],
-
-                    roll1_a: [
-                        self.cards[1].digit_a.current as f32,
-                        self.cards[1].digit_a.next as f32,
-                        self.cards[1].digit_a.progress,
-                        if self.cards[1].digit_a.active { 1.0 } else { 0.0 },
-                    ],
-
-                    roll1_b: [
-                        self.cards[1].digit_b.current as f32,
-                        self.cards[1].digit_b.next as f32,
-                        self.cards[1].digit_b.progress,
-                        if self.cards[1].digit_b.active { 1.0 } else { 0.0 },
-                    ],
-
-                    ampm_visible: if self.config.time_format == TimeFormat::H12 {
-                        1.0
-                    } else {
-                        0.0
-                    },
-
-                    is_pm: if self.clock.is_pm { 1.0 } else { 0.0 },
-
-                    _ampm_pad: [0.0, 0.0],
-                },
-            )?;
+            let half = self.bg_params(0.5, time, &card_geometry);
+            let full = self.bg_params(1.0, time, &card_geometry);
+            write_cbuffer(&self.ctx, &self.bg_cb, half)?;
+            write_cbuffer(&self.ctx, &self.digits_cb, full)?;
 
             let viewport = D3D11_VIEWPORT {
                 TopLeftX: 0.0,
@@ -687,6 +671,16 @@ impl Gfx {
             self.ctx.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
             self.ctx.VSSetShader(&self.vs, None);
+
+            let (hw, hh) = (((self.w / 2).max(1)) as f32, ((self.h / 2).max(1)) as f32);
+            self.ctx.RSSetViewports(Some(&[D3D11_VIEWPORT {
+                TopLeftX: 0.0,
+                TopLeftY: 0.0,
+                Width: hw,
+                Height: hh,
+                MinDepth: 0.0,
+                MaxDepth: 1.0,
+            }]));
 
             // PASS 1
             // Aurora + rolling digits -> bg_tex
@@ -704,12 +698,18 @@ impl Gfx {
             self.ctx.PSSetSamplers(0, Some(&[Some(self.sampler.clone())]));
 
             self.ctx.Draw(3, 0);
+            self.ctx.OMSetRenderTargets(None, None);
+            self.ctx.GenerateMips(&self.bg_srv);
 
             // PASS 2
             // bg_tex -> backbuffer
-            let backbuffer = self.backbuffer.as_ref().unwrap();
-
-            self.ctx.CopyResource(backbuffer, &self.bg_tex);
+            self.ctx.RSSetViewports(Some(&[viewport])); // full-res again
+            self.ctx.OMSetRenderTargets(Some(&[self.bb_rtv.clone()]), None);
+            self.ctx.PSSetShader(&self.blit_ps, None);
+            self.ctx.PSSetConstantBuffers(0, Some(&[Some(self.digits_cb.clone())]));
+            self.ctx.PSSetShaderResources(0, Some(&[Some(self.bg_srv.clone())]));
+            self.ctx.PSSetSamplers(0, Some(&[Some(self.sampler.clone())]));
+            self.ctx.Draw(3, 0);
 
             self.ctx.OMSetRenderTargets(Some(&[self.bb_rtv.clone()]), None);
 
@@ -758,6 +758,20 @@ impl Gfx {
 
                 self.ctx.PSSetConstantBuffers(0, Some(&[Some(self.glass_cb.clone())]));
 
+                let m = 120.0; // shadow margin
+                let x0 = (center_x - w * 0.5 - m).max(0.0);
+                let y0 = (cy - h * 0.5 - m).max(0.0);
+                let x1 = (center_x + w * 0.5 + m).min(sw);
+                let y1 = (cy + h * 0.5 + m).min(sh);
+                self.ctx.RSSetViewports(Some(&[D3D11_VIEWPORT {
+                    TopLeftX: x0,
+                    TopLeftY: y0,
+                    Width: (x1 - x0).max(1.0),
+                    Height: (y1 - y0).max(1.0),
+                    MinDepth: 0.0,
+                    MaxDepth: 1.0,
+                }]));
+
                 self.ctx.Draw(3, 0);
             }
 
@@ -765,8 +779,12 @@ impl Gfx {
 
             self.ctx.PSSetShaderResources(0, Some(&[None, None]));
 
+            self.ctx.RSSetViewports(Some(&[viewport]));
+
             // PASS 4
             // Crisp rolling digits over glass
+            self.ctx.PSSetConstantBuffers(0, Some(&[Some(self.digits_cb.clone())]));
+
             self.ctx.OMSetBlendState(
                 Some(&self.digits_blend),
                 Some(&[0.0, 0.0, 0.0, 0.0]),
@@ -781,8 +799,6 @@ impl Gfx {
             );
 
             self.ctx.PSSetSamplers(0, Some(&[Some(self.sampler.clone())]));
-
-            self.ctx.PSSetConstantBuffers(0, Some(&[Some(self.bg_cb.clone())]));
 
             self.ctx.Draw(3, 0);
 

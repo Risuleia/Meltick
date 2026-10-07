@@ -12,6 +12,11 @@ fn main() {
         let _ = windows::Win32::UI::HiDpi::SetProcessDpiAwarenessContext(
             windows::Win32::UI::HiDpi::DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2,
         );
+
+        let _ = windows::Win32::System::Threading::SetPriorityClass(
+            windows::Win32::System::Threading::GetCurrentProcess(),
+            windows::Win32::System::Threading::REALTIME_PRIORITY_CLASS,
+        );
     }
 
     let config = config::Config::load();
@@ -40,5 +45,7 @@ fn main() {
                 eprintln!("screensaver config: {e}");
             }
         }
+
+        app::ScreenSaverMode::Exit => {}
     }
 }

@@ -47,6 +47,8 @@ fn compile_shaders() {
     compile_shader(Path::new("shaders/glass.hlsl"), s!("ps_5_0"), &out_dir.join("glass_ps.cso"));
 
     compile_shader(Path::new("shaders/digits.hlsl"), s!("ps_5_0"), &out_dir.join("digits_ps.cso"));
+
+    compile_shader(Path::new("shaders/blit.hlsl"), s!("ps_5_0"), &out_dir.join("blit_ps.cso"));
 }
 
 #[cfg(windows)]
