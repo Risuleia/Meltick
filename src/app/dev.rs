@@ -17,7 +17,7 @@ use windows::{
     core::{Result, w},
 };
 
-use crate::gfx::Gfx;
+use crate::{config::Config, gfx::Gfx};
 
 thread_local! {
     static GFX: RefCell<Option<Gfx>> = const { RefCell::new(None) };
@@ -59,6 +59,7 @@ pub fn run_dev() -> Result<()> {
             hwnd,
             (rc.right - rc.left) as u32,
             (rc.bottom - rc.top) as u32,
+            Config::default()
         )?;
         GFX.with(|g| *g.borrow_mut() = Some(gfx));
 

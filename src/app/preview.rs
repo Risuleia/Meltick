@@ -13,14 +13,14 @@ use windows::{
     core::{Result, w},
 };
 
-use crate::gfx::Gfx;
+use crate::{config::Config, gfx::Gfx};
 
 struct PreviewWindow {
     hwnd: HWND,
     gfx: Option<Gfx>,
 }
 
-pub fn run_preview(parent: HWND) -> Result<()> {
+pub fn run_preview(parent: HWND, config: Config) -> Result<()> {
     unsafe {
         let mut rect = RECT::default();
 
@@ -75,7 +75,7 @@ pub fn run_preview(parent: HWND) -> Result<()> {
         }
 
         window.hwnd = hwnd.clone()?;
-        window.gfx = Some(Gfx::new(hwnd?, width as u32, height as u32)?);
+        window.gfx = Some(Gfx::new(hwnd?, width as u32, height as u32, config)?);
 
         let start = std::time::Instant::now();
 

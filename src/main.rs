@@ -12,6 +12,8 @@ fn main() {
         );
     }
 
+    let config = config::Config::load();
+
     match app::parse_screen_saver_mode() {
         app::ScreenSaverMode::Dev => {
             if let Err(e) = app::run_dev() {
@@ -20,19 +22,19 @@ fn main() {
         }
 
         app::ScreenSaverMode::ScreenSaver => {
-            if let Err(e) = app::run_screensaver() {
+            if let Err(e) = app::run_screensaver(config) {
                 eprintln!("fatal: {e}");
             }
         }
 
         app::ScreenSaverMode::Preview(hwnd) => {
-            if let Err(e) = app::run_preview(hwnd) {
+            if let Err(e) = app::run_preview(hwnd, config) {
                 eprintln!("screensaver preview: {e}");
             }
         }
 
         app::ScreenSaverMode::Configure(hwnd) => {
-            if let Err(e) = app::run_config(hwnd) {
+            if let Err(e) = app::run_config(hwnd, config) {
                 eprintln!("screensaver config: {e}");
             }
         }

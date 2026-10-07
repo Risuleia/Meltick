@@ -9,7 +9,8 @@ use windows::Win32::Graphics::Dxgi::*;
 use windows::core::*;
 
 use crate::clock::ClockDigits;
-use crate::clock::TimeFormat;
+use crate::config::Config;
+use crate::config::TimeFormat;
 use crate::spring::Spring;
 
 const IMPULSE_TOP: f32 = 1400.0; // px/s kick on the leading (top) edge
@@ -132,10 +133,6 @@ impl DigitRoll {
             self.active = false;
         }
     }
-
-    fn visible_digit(&self) -> u8 {
-        if self.active { self.next } else { self.current }
-    }
 }
 
 pub struct Gfx {
@@ -165,9 +162,10 @@ pub struct Gfx {
     sampler: ID3D11SamplerState,
 
     cards: [CardSprings; 2],
-    clock_format: TimeFormat,
     clock: ClockDigits,
     last_t: f32,
+
+    config: Config,
 
     w: u32,
     h: u32,
@@ -464,7 +462,7 @@ unsafe fn write_cbuffer<T>(ctx: &ID3D11DeviceContext, buf: &ID3D11Buffer, value:
 }
 
 impl Gfx {
-    pub fn new(hwnd: HWND, w: u32, h: u32) -> Result<Self> {
+    pub fn new(hwnd: HWND, w: u32, h: u32, config: Config) -> Result<Self> {
         unsafe {
             let mut device = None;
             let mut ctx = None;
@@ -522,8 +520,7 @@ impl Gfx {
             let mut sampler = None;
             device.CreateSamplerState(&samp_desc, Some(&mut sampler))?;
 
-            let clock_format = TimeFormat::TwelveHour;
-            let clock = ClockDigits::now(clock_format);
+            let clock = ClockDigits::now(config.time_format);
 
             Ok(Self {
                 device,
@@ -548,9 +545,9 @@ impl Gfx {
                     CardSprings::new(clock.digits[0], clock.digits[1]),
                     CardSprings::new(clock.digits[2], clock.digits[3]),
                 ],
-                clock_format,
                 clock,
                 last_t: 0.0,
+                config,
                 w,
                 h,
             })
@@ -602,7 +599,7 @@ impl Gfx {
     }
 
     fn update_clock(&mut self) {
-        let new_clock = ClockDigits::now(self.clock_format);
+        let new_clock = ClockDigits::now(self.config.time_format);
 
         let mut card0_changed = false;
         let mut card1_changed = false;
@@ -662,7 +659,14 @@ impl Gfx {
 
         let (sw, sh) = (self.w as f32, self.h as f32);
 
-        let card_size = (sw.min(sh) * CARD_SIZE_FRAC).max(120.0);
+        let scale = self
+            .config
+            .scale
+            .clamp(Config::MIN_SCALE, Config::MAX_SCALE);
+
+        let base_card_size = (sw.min(sh) * CARD_SIZE_FRAC).max(120.0);
+
+        let card_size = base_card_size * scale;
 
         let card_w = card_size;
         let base_h = card_size;
@@ -747,7 +751,7 @@ impl Gfx {
                         },
                     ],
 
-                    ampm_visible: if self.clock_format == TimeFormat::TwelveHour {
+                    ampm_visible: if self.config.time_format == TimeFormat::H12 {
                         1.0
                     } else {
                         0.0
@@ -774,7 +778,6 @@ impl Gfx {
                 .IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
             self.ctx.VSSetShader(&self.vs, None);
-
 
             // PASS 1
             //

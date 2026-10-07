@@ -4,22 +4,19 @@ use windows::{
     Win32::{
         Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, POINT, WPARAM},
         System::LibraryLoader::GetModuleHandleW,
-        UI::
-            WindowsAndMessaging::{
-                CREATESTRUCTW, CreateWindowExW,
-                DefWindowProcW, DestroyWindow, DispatchMessageW, GWLP_USERDATA, GetCursorPos, GetWindowLongPtrW, MSG,
-                PM_REMOVE, PeekMessageW, PostQuitMessage, RegisterClassW, SW_SHOW, SetCursor,
-                SetWindowLongPtrW, ShowWindow, TranslateMessage, WM_KEYDOWN, WM_LBUTTONDOWN, WM_MBUTTONDOWN,
-                WM_MOUSEHWHEEL, WM_MOUSEMOVE, WM_MOUSEWHEEL, WM_NCCREATE, WM_NCDESTROY,
-                WM_RBUTTONDOWN, WM_SETCURSOR, WM_SYSKEYDOWN, WM_XBUTTONDOWN, WNDCLASSW,
-                WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_POPUP
-            }
-        ,
+        UI::WindowsAndMessaging::{
+            CREATESTRUCTW, CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW,
+            GWLP_USERDATA, GetCursorPos, GetWindowLongPtrW, MSG, PM_REMOVE, PeekMessageW,
+            PostQuitMessage, RegisterClassW, SW_SHOW, SetCursor, SetWindowLongPtrW, ShowWindow,
+            TranslateMessage, WM_KEYDOWN, WM_LBUTTONDOWN, WM_MBUTTONDOWN, WM_MOUSEHWHEEL,
+            WM_MOUSEMOVE, WM_MOUSEWHEEL, WM_NCCREATE, WM_NCDESTROY, WM_RBUTTONDOWN, WM_SETCURSOR,
+            WM_SYSKEYDOWN, WM_XBUTTONDOWN, WNDCLASSW, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_POPUP,
+        },
     },
     core::Result,
 };
 
-use crate::{gfx::Gfx, util::enumerate_monitors};
+use crate::{config::Config, gfx::Gfx, util::enumerate_monitors};
 
 const MOUSE_EXIT_THRESHOLD: i32 = 20;
 
@@ -29,7 +26,7 @@ struct ScreenSaverWindow {
     gfx: Option<Gfx>,
 }
 
-pub fn run_screensaver() -> Result<()> {
+pub fn run_screensaver(config: Config) -> Result<()> {
     let monitors = enumerate_monitors()?;
 
     if monitors.is_empty() {
@@ -98,7 +95,7 @@ pub fn run_screensaver() -> Result<()> {
 
         window.hwnd = hwnd;
 
-        window.gfx = Some(Gfx::new(hwnd, width as u32, height as u32)?);
+        window.gfx = Some(Gfx::new(hwnd, width as u32, height as u32, config)?);
 
         unsafe {
             let _ = ShowWindow(hwnd, SW_SHOW);

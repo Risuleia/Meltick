@@ -1,11 +1,6 @@
 use windows::Win32::System::SystemInformation::GetLocalTime;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TimeFormat {
-    TwelveHour,
-    #[allow(unused)]
-    TwentyFourHour,
-}
+use crate::config::TimeFormat;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ClockDigits {
@@ -22,11 +17,11 @@ impl ClockDigits {
             let minute = time.wMinute as u8;
 
             let display_hour = match format {
-                TimeFormat::TwelveHour => match hour % 12 {
+                TimeFormat::H12 => match hour % 12 {
                     0 => 12,
                     h => h,
                 },
-                TimeFormat::TwentyFourHour => hour,
+                TimeFormat::H24 => hour,
             };
 
             Self {

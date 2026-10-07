@@ -13,7 +13,9 @@ use windows::{
     core::{Result, w},
 };
 
-pub fn run_config(parent: Option<HWND>) -> Result<()> {
+use crate::config::Config;
+
+pub fn run_config(parent: Option<HWND>, config: Config) -> Result<()> {
     unsafe {
         let instance = GetModuleHandleW(None)?.into();
 

@@ -2,6 +2,7 @@ use windows::{
     Win32::{
         Foundation::{HWND, LPARAM, RECT},
         Graphics::Gdi::{EnumDisplayMonitors, GetMonitorInfoW, HMONITOR, MONITORINFO},
+        System::Registry::{HKEY, REG_DWORD, REG_VALUE_TYPE, RegQueryValueExW, RegSetValueExW},
     },
     core::BOOL,
 };
@@ -60,4 +61,53 @@ unsafe extern "system" fn monitor_enum_proc(
     }
 
     BOOL(1)
+}
+
+pub unsafe fn read_dword(key: HKEY, value_name: windows::core::PCWSTR) -> Option<u32> {
+    let mut value_type = REG_VALUE_TYPE::default();
+    let mut value = 0u32;
+    let mut size = std::mem::size_of::<u32>() as u32;
+
+    unsafe {
+        let result = RegQueryValueExW(
+            key,
+            value_name,
+            None,
+            Some(&mut value_type),
+            Some(&mut value as *mut u32 as *mut u8),
+            Some(&mut size),
+        );
+
+        if result.is_err() {
+            return None;
+        }
+    }
+
+    if value_type != REG_DWORD || size != 4 {
+        return None;
+    }
+
+    Some(value)
+}
+
+pub unsafe fn write_dword(
+    key: HKEY,
+    value_name: windows::core::PCWSTR,
+    value: u32,
+) -> windows::core::Result<()> {
+    unsafe {
+        let result = RegSetValueExW(
+            key,
+            value_name,
+            Some(0),
+            REG_DWORD,
+            Some(&value.to_ne_bytes()),
+        );
+
+        if result.is_err() {
+            return Err(windows::core::Error::from_thread());
+        }
+    }
+
+    Ok(())
 }
