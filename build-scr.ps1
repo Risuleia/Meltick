@@ -8,7 +8,7 @@ if ($LASTEXITCODE -ne 0) {
     throw "cargo build --release failed."
 }
 
-$dist = Join-Path $PSScriptRoot "..\dist"
+$dist = Join-Path $PSScriptRoot "dist"
 $dist = [System.IO.Path]::GetFullPath($dist)
 
 Write-Host "Cleaning dist..." -ForegroundColor Cyan
