@@ -29,6 +29,7 @@ const CARD_RADIUS_FRAC: f32 = 0.12;
 const CARD_GAP_FRAC: f32 = 0.083;
 
 const ROLL_GLASS_IMPULSE: f32 = 500.0;
+const DIGIT_ROLL_SPEED: f32 = 4.0;
 
 #[repr(C)]
 struct BgParams {
@@ -124,7 +125,7 @@ impl DigitRoll {
         }
 
         // temp animation speed
-        self.progress += dt * 4.0;
+        self.progress += dt * DIGIT_ROLL_SPEED;
 
         if self.progress >= 1.0 {
             self.progress = 1.0;
@@ -762,7 +763,6 @@ impl Gfx {
             self.ctx.VSSetShader(&self.vs, None);
 
             // PASS 1
-            //
             // Aurora + rolling digits -> bg_tex
             self.ctx.OMSetRenderTargets(Some(&[Some(self.bg_rtv.clone())]), None);
 
@@ -780,7 +780,6 @@ impl Gfx {
             self.ctx.Draw(3, 0);
 
             // PASS 2
-            //
             // bg_tex -> backbuffer
             let backbuffer = self.backbuffer.as_ref().unwrap();
 
@@ -789,7 +788,6 @@ impl Gfx {
             self.ctx.OMSetRenderTargets(Some(&[self.bb_rtv.clone()]), None);
 
             // PASS 3
-            //
             // Glass cards
             self.ctx.OMSetBlendState(
                 Some(&self.digits_blend),
@@ -842,7 +840,6 @@ impl Gfx {
             self.ctx.PSSetShaderResources(0, Some(&[None, None]));
 
             // PASS 4
-            //
             // Crisp rolling digits over glass
             self.ctx.OMSetBlendState(
                 Some(&self.digits_blend),
