@@ -1,12 +1,11 @@
 use windows::Win32::{
-    Foundation::{COLORREF, POINT, RECT},
+    Foundation::{POINT, RECT},
     Graphics::Gdi::HDC,
 };
 
 use crate::app::config::{
-    constants::COMPONENT_RADIUS, draw::{
-        BG, SURFACE, SURFACE_ACTIVE, TEXT, draw_button_text, draw_centered_text, draw_rounded_rect,
-    },
+    constants::COMPONENT_RADIUS,
+    draw::{BG, SURFACE, SURFACE_ACTIVE, TEXT, draw_button_text, draw_rounded_rect},
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -30,16 +29,7 @@ impl Button {
         label: &'static str,
         style: ButtonStyle,
     ) -> Self {
-        Self {
-            rect: RECT {
-                left: x,
-                top: y,
-                right: x + width,
-                bottom: y + height,
-            },
-            label,
-            style,
-        }
+        Self { rect: RECT { left: x, top: y, right: x + width, bottom: y + height }, label, style }
     }
 
     pub fn contains(&self, point: POINT) -> bool {
@@ -54,18 +44,16 @@ impl Button {
             ButtonStyle::Primary => (TEXT, BG),
 
             ButtonStyle::Secondary => {
-                let color = if hovered || pressed {
-                    SURFACE_ACTIVE
-                } else {
-                    SURFACE
-                };
+                let color = if hovered || pressed { SURFACE_ACTIVE } else { SURFACE };
 
                 (color, TEXT)
             }
         };
 
-        draw_rounded_rect(hdc, self.rect, COMPONENT_RADIUS, color);
+        unsafe {
+            draw_rounded_rect(hdc, self.rect, COMPONENT_RADIUS, color);
 
-        draw_button_text(hdc, self.label, self.rect, text_color);
+            draw_button_text(hdc, self.label, self.rect, text_color);
+        }
     }
 }

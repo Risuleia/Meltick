@@ -1,44 +1,55 @@
 use windows::{
     Win32::{
-        Foundation::{COLORREF, HWND, LPARAM, LRESULT, POINT, RECT, WPARAM}, Graphics::Gdi::{
-            BeginPaint, BitBlt, CreateCompatibleBitmap, CreateCompatibleDC, CreateRoundRectRgn, CreateSolidBrush, DeleteDC, DeleteObject, EndPaint, FillRect, GetMonitorInfoW, InvalidateRect, MONITOR_DEFAULTTONEAREST, MONITORINFO, MonitorFromPoint, PAINTSTRUCT, SRCCOPY, ScreenToClient, SelectObject, SetWindowRgn, UpdateWindow,
-        }, System::LibraryLoader::GetModuleHandleW, UI::{
-            Controls::{TBS_HORZ, TRACKBAR_CLASS}, Input::KeyboardAndMouse::{ReleaseCapture, SetCapture}, WindowsAndMessaging::{
-                BS_PUSHBUTTON, CREATESTRUCTW, CS_HREDRAW, CS_VREDRAW, CW_USEDEFAULT, CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, GWLP_USERDATA, GetClientRect, GetCursorPos, GetMessageW, GetWindowLongPtrW, HCURSOR, HMENU, HTCAPTION, IDC_ARROW, LoadCursorW, MSG, PM_REMOVE, PeekMessageW, PostQuitMessage, RegisterClassW, SW_SHOW, SetWindowLongPtrW, ShowWindow, TranslateMessage, WINDOW_EX_STYLE, WINDOW_STYLE, WM_CLOSE, WM_DESTROY, WM_ERASEBKGND, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MOUSEMOVE, WM_NCCREATE, WM_NCDESTROY, WM_NCHITTEST, WM_PAINT, WM_QUIT, WM_SIZE, WNDCLASSW, WS_CAPTION, WS_CHILD, WS_MINIMIZEBOX, WS_OVERLAPPED, WS_POPUP, WS_SYSMENU, WS_VISIBLE,
-            },
+        Foundation::{HWND, LPARAM, LRESULT, POINT, RECT, WPARAM},
+        Graphics::Gdi::{
+            BeginPaint, BitBlt, CreateCompatibleBitmap, CreateCompatibleDC, CreateRoundRectRgn,
+            DeleteDC, DeleteObject, EndPaint, GetMonitorInfoW, MONITOR_DEFAULTTONEAREST,
+            MONITORINFO, MonitorFromPoint, PAINTSTRUCT, SRCCOPY, SelectObject, SetWindowRgn,
+            UpdateWindow,
         },
-    }, core::{Result, w},
+        System::LibraryLoader::GetModuleHandleW,
+        UI::WindowsAndMessaging::{
+            CREATESTRUCTW, CS_HREDRAW, CS_VREDRAW, CreateWindowExW, DefWindowProcW, DestroyWindow,
+            DispatchMessageW, GWLP_USERDATA, GetClientRect, GetCursorPos, GetWindowLongPtrW,
+            HCURSOR, IDC_ARROW, LoadCursorW, MSG, PM_REMOVE, PeekMessageW, PostQuitMessage,
+            RegisterClassW, SW_SHOW, SetWindowLongPtrW, ShowWindow, TranslateMessage,
+            WINDOW_EX_STYLE, WM_CLOSE, WM_DESTROY, WM_ERASEBKGND, WM_LBUTTONDOWN, WM_LBUTTONUP,
+            WM_MOUSEMOVE, WM_NCCREATE, WM_NCDESTROY, WM_NCHITTEST, WM_PAINT, WM_QUIT, WM_SIZE,
+            WNDCLASSW, WS_CHILD, WS_POPUP, WS_VISIBLE,
+        },
+    },
+    core::{Result, w},
 };
 
-use crate::app::config::{
-    constants::*,
-    draw::{self, draw_config_ui},
-};
 use crate::{
-    app::config::components::{Button, ButtonStyle, SegmentedControl, Slider},
+    app::config::{
+        components::{Button, ButtonStyle, SegmentedControl, Slider},
+        constants::*,
+        draw::draw_config_ui,
+        input,
+    },
     config::Config,
     gfx::Gfx,
 };
 
-struct ConfigWindow {
-    hwnd: HWND,
-    preview_hwnd: HWND,
-    preview_gfx: Option<Gfx>,
+pub(crate) struct ConfigWindow {
+    pub(crate) hwnd: HWND,
+    pub(crate) preview_hwnd: HWND,
+    pub(crate) preview_gfx: Option<Gfx>,
 
-    original_config: Config,
-    working_config: Config,
+    pub(crate) working_config: Config,
 
-    format_control: SegmentedControl,
-    scale_control: Slider,
+    pub(crate) format_control: SegmentedControl,
+    pub(crate) scale_control: Slider,
 
-    defaults_button: Button,
-    cancel_button: Button,
-    apply_button: Button,
+    pub(crate) defaults_button: Button,
+    pub(crate) cancel_button: Button,
+    pub(crate) apply_button: Button,
 
-    hovered_button: Option<ButtonId>,
-    pressed_button: Option<ButtonId>,
+    pub(crate) hovered_button: Option<ButtonId>,
+    pub(crate) pressed_button: Option<ButtonId>,
 
-    dragging_scale: bool,
+    pub(crate) dragging_scale: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -82,7 +93,6 @@ pub fn run_config(parent: Option<HWND>, config: Config) -> Result<()> {
             preview_hwnd: HWND::default(),
             preview_gfx: None,
 
-            original_config: config,
             working_config: config,
 
             format_control: SegmentedControl::new(FORMAT_X, FORMAT_Y, FORMAT_W, FORMAT_H),
@@ -218,50 +228,31 @@ pub fn run_config(parent: Option<HWND>, config: Config) -> Result<()> {
 }
 
 unsafe fn centered_window_position(width: i32, height: i32) -> (i32, i32) {
-    let point = GetCursorPos(&mut POINT::default());
+    unsafe {
+        let point = GetCursorPos(&mut POINT::default());
 
-    let cursor = if point.is_ok() {
-        let mut point = POINT::default();
-        let _ = GetCursorPos(&mut point);
-        point
-    } else {
-        POINT { x: 0, y: 0 }
-    };
+        let cursor = if point.is_ok() {
+            let mut point = POINT::default();
+            let _ = GetCursorPos(&mut point);
+            point
+        } else {
+            POINT { x: 0, y: 0 }
+        };
 
-    let monitor = MonitorFromPoint(cursor, MONITOR_DEFAULTTONEAREST);
+        let monitor = MonitorFromPoint(cursor, MONITOR_DEFAULTTONEAREST);
 
-    let mut info = MONITORINFO {
-        cbSize: std::mem::size_of::<MONITORINFO>() as u32,
-        ..Default::default()
-    };
+        let mut info =
+            MONITORINFO { cbSize: std::mem::size_of::<MONITORINFO>() as u32, ..Default::default() };
 
-    let _ = GetMonitorInfoW(monitor, &mut info);
+        let _ = GetMonitorInfoW(monitor, &mut info);
 
-    let work = info.rcWork;
+        let work = info.rcWork;
 
-    let x = work.left + ((work.right - work.left) - width) / 2;
+        let x = work.left + ((work.right - work.left) - width) / 2;
 
-    let y = work.top + ((work.bottom - work.top) - height) / 2;
+        let y = work.top + ((work.bottom - work.top) - height) / 2;
 
-    (x, y)
-}
-
-fn point_from_lparam(lparam: LPARAM) -> POINT {
-    POINT {
-        x: (lparam.0 as i16) as i32,
-        y: ((lparam.0 >> 16) as i16) as i32,
-    }
-}
-
-fn button_at(window: &ConfigWindow, point: POINT) -> Option<ButtonId> {
-    if window.defaults_button.contains(point) {
-        Some(ButtonId::Defaults)
-    } else if window.cancel_button.contains(point) {
-        Some(ButtonId::Cancel)
-    } else if window.apply_button.contains(point) {
-        Some(ButtonId::Apply)
-    } else {
-        None
+        (x, y)
     }
 }
 
@@ -301,171 +292,11 @@ unsafe extern "system" fn config_wnd_proc(
                 DefWindowProcW(hwnd, msg, _wparam, lparam)
             }
 
-            WM_LBUTTONDOWN => {
-                let point = point_from_lparam(lparam);
+            WM_LBUTTONDOWN => input::handle_lbutton_down(hwnd, lparam),
 
-                let window = &mut *(GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut ConfigWindow);
+            WM_LBUTTONUP => input::handle_lbutton_up(hwnd, lparam),
 
-                //
-                // BUTTONS
-                //
-                if let Some(button) = button_at(window, point) {
-                    window.pressed_button = Some(button);
-
-                    InvalidateRect(Some(hwnd), None, false);
-
-                    return LRESULT(0);
-                }
-
-                //
-                // TIME FORMAT
-                //
-                if let Some(format) = window.format_control.value_at(point) {
-                    window.pressed_button = None;
-
-                    if window.working_config.time_format != format {
-                        window.working_config.time_format = format;
-
-                        if let Some(gfx) = window.preview_gfx.as_mut() {
-                            gfx.set_config(window.working_config);
-                        }
-                    }
-
-                    InvalidateRect(Some(hwnd), None, false);
-
-                    return LRESULT(0);
-                }
-
-                //
-                // SCALE
-                //
-                if window.scale_control.contains(point) {
-                    window.pressed_button = None;
-                    window.dragging_scale = true;
-
-                    let scale = window.scale_control.scale_from_point(point.x);
-
-                    if window.working_config.scale != scale {
-                        window.working_config.scale = scale;
-
-                        if let Some(gfx) = window.preview_gfx.as_mut() {
-                            gfx.set_config(window.working_config);
-                        }
-                    }
-
-                    SetCapture(hwnd);
-
-                    InvalidateRect(Some(hwnd), None, false);
-
-                    return LRESULT(0);
-                }
-
-                LRESULT(0)
-            }
-
-            WM_MOUSEMOVE => {
-                let point = point_from_lparam(lparam);
-
-                let window = &mut *(GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut ConfigWindow);
-
-                //
-                // BUTTON HOVER
-                //
-                let hovered = button_at(window, point);
-
-                if window.hovered_button != hovered {
-                    window.hovered_button = hovered;
-
-                    InvalidateRect(Some(hwnd), None, false);
-                }
-
-                //
-                // SCALE DRAGGING
-                //
-                if window.dragging_scale {
-                    let scale = window.scale_control.scale_from_point(point.x);
-
-                    if window.working_config.scale != scale {
-                        window.working_config.scale = scale;
-
-                        if let Some(gfx) = window.preview_gfx.as_mut() {
-                            gfx.set_config(window.working_config);
-                        }
-
-                        InvalidateRect(Some(hwnd), None, false);
-                    }
-                }
-
-                LRESULT(0)
-            }
-
-            WM_LBUTTONUP => {
-                let point = point_from_lparam(lparam);
-
-                let window = &mut *(GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut ConfigWindow);
-
-                //
-                // SLIDER
-                //
-                if window.dragging_scale {
-                    window.dragging_scale = false;
-                    ReleaseCapture();
-                }
-
-                //
-                // BUTTON
-                //
-                let pressed = window.pressed_button;
-                let released_over = button_at(window, point);
-
-                window.pressed_button = None;
-
-                InvalidateRect(Some(hwnd), None, false);
-
-                //
-                // Only activate if the mouse was
-                // released over the same button.
-                //
-                if pressed == released_over {
-                    match pressed {
-                        Some(ButtonId::Defaults) => {
-                            window.working_config = Config::default();
-
-                            if let Some(gfx) = window.preview_gfx.as_mut() {
-                                gfx.set_config(window.working_config);
-                            }
-
-                            InvalidateRect(Some(hwnd), None, false);
-                        }
-
-                        Some(ButtonId::Cancel) => {
-                            let _ = DestroyWindow(hwnd);
-                        }
-
-                        Some(ButtonId::Apply) => {
-                            let mut config = window.working_config;
-
-                            config.validate();
-
-                            match config.save() {
-                                Ok(()) => {
-                                    window.working_config = config;
-
-                                    let _ = DestroyWindow(hwnd);
-                                }
-
-                                Err(error) => {
-                                    eprintln!("failed to save configuration: {error}");
-                                }
-                            }
-                        }
-
-                        None => {}
-                    }
-                }
-
-                LRESULT(0)
-            }
+            WM_MOUSEMOVE => input::handle_mousemove(hwnd, lparam),
 
             WM_PAINT => {
                 let mut ps = PAINTSTRUCT::default();
@@ -521,29 +352,7 @@ unsafe extern "system" fn config_wnd_proc(
                 LRESULT(0)
             }
 
-            WM_NCHITTEST => {
-                let window = &*(GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *const ConfigWindow);
-
-                let point = POINT {
-                    x: (lparam.0 as i16) as i32,
-                    y: ((lparam.0 >> 16) as i16) as i32,
-                };
-
-                let mut client_point = point;
-
-                let _ = ScreenToClient(hwnd, &mut client_point);
-
-                if window.format_control.contains(client_point)
-                    || window.scale_control.contains(client_point)
-                    || window.defaults_button.contains(client_point)
-                    || window.cancel_button.contains(client_point)
-                    || window.apply_button.contains(client_point)
-                {
-                    return DefWindowProcW(hwnd, WM_NCHITTEST, _wparam, lparam);
-                }
-
-                LRESULT(HTCAPTION as isize)
-            }
+            WM_NCHITTEST => input::handle_nchittest(hwnd, lparam, _wparam),
 
             WM_ERASEBKGND => LRESULT(1),
 

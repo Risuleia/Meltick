@@ -1,6 +1,6 @@
 pub struct Spring {
     pub x: f32,
-    pub v: f32
+    pub v: f32,
 }
 
 impl Spring {

@@ -7,8 +7,8 @@ mod dev;
 mod preview;
 mod screensaver;
 
-pub use dev::run_dev;
 pub use config::run_config;
+pub use dev::run_dev;
 pub use preview::run_preview;
 pub use screensaver::run_screensaver;
 
@@ -52,9 +52,7 @@ pub fn parse_screen_saver_mode() -> ScreenSaverMode {
         }
 
         "/c" | "-c" => {
-            let hwnd = args
-                .next()
-                .and_then(|value| parse_hwnd(&value.to_string_lossy()));
+            let hwnd = args.next().and_then(|value| parse_hwnd(&value.to_string_lossy()));
 
             ScreenSaverMode::Configure(hwnd)
         }

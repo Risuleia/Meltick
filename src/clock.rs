@@ -25,12 +25,7 @@ impl ClockDigits {
             };
 
             Self {
-                digits: [
-                    display_hour / 10,
-                    display_hour % 10,
-                    minute / 10,
-                    minute % 10,
-                ],
+                digits: [display_hour / 10, display_hour % 10, minute / 10, minute % 10],
                 is_pm: hour >= 12,
             }
         }

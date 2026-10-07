@@ -68,11 +68,8 @@ pub fn run_screensaver(config: Config) -> Result<()> {
 
         let height = rect.bottom - rect.top;
 
-        let mut window = Box::new(ScreenSaverWindow {
-            hwnd: HWND::default(),
-            input_origin,
-            gfx: None,
-        });
+        let mut window =
+            Box::new(ScreenSaverWindow { hwnd: HWND::default(), input_origin, gfx: None });
 
         let window_ptr = &mut *window as *mut ScreenSaverWindow;
 

@@ -48,10 +48,7 @@ pub fn run_preview(parent: HWND, config: Config) -> Result<()> {
 
         RegisterClassW(&wc);
 
-        let mut window = Box::new(PreviewWindow {
-            hwnd: HWND::default(),
-            gfx: None,
-        });
+        let mut window = Box::new(PreviewWindow { hwnd: HWND::default(), gfx: None });
 
         let window_ptr = &mut *window as *mut PreviewWindow;
 

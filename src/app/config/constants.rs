@@ -1,5 +1,3 @@
-use windows::Win32::Foundation::COLORREF;
-
 pub const CONFIG_WIDTH: i32 = 1100;
 pub const CONFIG_HEIGHT: i32 = 800;
 
@@ -30,10 +28,3 @@ pub const APPLY_X: i32 = 898;
 pub const ACTION_Y: i32 = 710;
 pub const ACTION_W: i32 = 120;
 pub const ACTION_H: i32 = 52;
-
-pub const BG: COLORREF = COLORREF(0x00131313);
-pub const CONTROL_BG: COLORREF = COLORREF(0x002F2F2F);
-pub const CONTROL_ACTIVE: COLORREF = COLORREF(0x00414141);
-pub const TEXT: COLORREF = COLORREF(0x00FFFFFF);
-pub const MUTED: COLORREF = COLORREF(0x00D0D0D0);
-pub const TRACK: COLORREF = COLORREF(0x00383838);

@@ -28,10 +28,7 @@ pub struct Config {
 
 impl Default for Config {
     fn default() -> Self {
-        Self {
-            time_format: TimeFormat::H24,
-            scale: 1.0,
-        }
+        Self { time_format: TimeFormat::H24, scale: 1.0 }
     }
 }
 
@@ -49,13 +46,8 @@ impl Config {
         unsafe {
             let mut key = HKEY::default();
 
-            let result = RegOpenKeyExW(
-                HKEY_CURRENT_USER,
-                REGISTRY_PATH,
-                Some(0),
-                KEY_READ,
-                &mut key,
-            );
+            let result =
+                RegOpenKeyExW(HKEY_CURRENT_USER, REGISTRY_PATH, Some(0), KEY_READ, &mut key);
 
             if result.is_err() {
                 return config;

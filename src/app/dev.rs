@@ -59,7 +59,7 @@ pub fn run_dev() -> Result<()> {
             hwnd,
             (rc.right - rc.left) as u32,
             (rc.bottom - rc.top) as u32,
-            Config::default()
+            Config::default(),
         )?;
         GFX.with(|g| *g.borrow_mut() = Some(gfx));
 

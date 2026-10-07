@@ -10,10 +10,7 @@ use windows::{
 pub fn parse_hwnd(value: &str) -> Option<HWND> {
     let value = value.trim();
 
-    let raw = if let Some(hex) = value
-        .strip_prefix("0x")
-        .or_else(|| value.strip_prefix("0X"))
-    {
+    let raw = if let Some(hex) = value.strip_prefix("0x").or_else(|| value.strip_prefix("0X")) {
         usize::from_str_radix(hex, 16).ok()?
     } else {
         value.parse::<usize>().ok()?
@@ -50,10 +47,8 @@ unsafe extern "system" fn monitor_enum_proc(
     unsafe {
         let monitors = &mut *(lparam.0 as *mut Vec<RECT>);
 
-        let mut info = MONITORINFO {
-            cbSize: std::mem::size_of::<MONITORINFO>() as u32,
-            ..Default::default()
-        };
+        let mut info =
+            MONITORINFO { cbSize: std::mem::size_of::<MONITORINFO>() as u32, ..Default::default() };
 
         if GetMonitorInfoW(hmonitor, &mut info).as_bool() {
             monitors.push(info.rcMonitor);
@@ -96,13 +91,8 @@ pub unsafe fn write_dword(
     value: u32,
 ) -> windows::core::Result<()> {
     unsafe {
-        let result = RegSetValueExW(
-            key,
-            value_name,
-            Some(0),
-            REG_DWORD,
-            Some(&value.to_ne_bytes()),
-        );
+        let result =
+            RegSetValueExW(key, value_name, Some(0), REG_DWORD, Some(&value.to_ne_bytes()));
 
         if result.is_err() {
             return Err(windows::core::Error::from_thread());

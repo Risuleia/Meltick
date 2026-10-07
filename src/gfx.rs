@@ -1,17 +1,21 @@
-use std::ffi::c_void;
-use std::path::Path;
-use windows::Win32::Foundation::*;
-use windows::Win32::Graphics::Direct3D::Fxc::*;
-use windows::Win32::Graphics::Direct3D::*;
-use windows::Win32::Graphics::Direct3D11::*;
-use windows::Win32::Graphics::Dxgi::Common::*;
-use windows::Win32::Graphics::Dxgi::*;
-use windows::core::*;
+use std::{ffi::c_void, path::Path};
+use windows::{
+    Win32::{
+        Foundation::*,
+        Graphics::{
+            Direct3D::{Fxc::*, *},
+            Direct3D11::*,
+            Dxgi::{Common::*, *},
+        },
+    },
+    core::*,
+};
 
-use crate::clock::ClockDigits;
-use crate::config::Config;
-use crate::config::TimeFormat;
-use crate::spring::Spring;
+use crate::{
+    clock::ClockDigits,
+    config::{Config, TimeFormat},
+    spring::Spring,
+};
 
 const IMPULSE_TOP: f32 = 1400.0; // px/s kick on the leading (top) edge
 const IMPULSE_BOT: f32 = 700.0; // px/s kick on the trailing (bottom) edge
@@ -101,12 +105,7 @@ struct DigitRoll {
 
 impl DigitRoll {
     fn new(digit: u8) -> Self {
-        Self {
-            current: digit,
-            next: digit,
-            progress: 0.0,
-            active: false,
-        }
+        Self { current: digit, next: digit, progress: 0.0, active: false }
     }
 
     fn trigger(&mut self, next: u8) {
@@ -242,10 +241,8 @@ fn compile(path: &str, target: PCSTR) -> Result<Vec<u8>> {
 
         let b = code.unwrap();
 
-        Ok(
-            std::slice::from_raw_parts(b.GetBufferPointer() as *const u8, b.GetBufferSize())
-                .to_vec(),
-        )
+        Ok(std::slice::from_raw_parts(b.GetBufferPointer() as *const u8, b.GetBufferSize())
+            .to_vec())
     }
 }
 
@@ -263,10 +260,7 @@ fn make_digit_atlas(device: &ID3D11Device) -> Result<ID3D11ShaderResourceView> {
         MipLevels: 1,
         ArraySize: 1,
         Format: DXGI_FORMAT_R8_UNORM,
-        SampleDesc: DXGI_SAMPLE_DESC {
-            Count: 1,
-            Quality: 0,
-        },
+        SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0 },
         Usage: D3D11_USAGE_DEFAULT,
         BindFlags: D3D11_BIND_SHADER_RESOURCE.0 as u32,
         ..Default::default()
@@ -307,10 +301,7 @@ fn make_ampm_atlas(device: &ID3D11Device) -> Result<ID3D11ShaderResourceView> {
         MipLevels: 1,
         ArraySize: 1,
         Format: DXGI_FORMAT_R8_UNORM,
-        SampleDesc: DXGI_SAMPLE_DESC {
-            Count: 1,
-            Quality: 0,
-        },
+        SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0 },
         Usage: D3D11_USAGE_DEFAULT,
         BindFlags: D3D11_BIND_SHADER_RESOURCE.0 as u32,
         ..Default::default()
@@ -339,12 +330,7 @@ fn make_ampm_atlas(device: &ID3D11Device) -> Result<ID3D11ShaderResourceView> {
 
 fn make_shaders(
     device: &ID3D11Device,
-) -> Result<(
-    ID3D11VertexShader,
-    ID3D11PixelShader,
-    ID3D11PixelShader,
-    ID3D11PixelShader,
-)> {
+) -> Result<(ID3D11VertexShader, ID3D11PixelShader, ID3D11PixelShader, ID3D11PixelShader)> {
     let vs_bc = compile("shaders/fullscreen.hlsl", s!("vs_5_0"))?;
     let bg_bc = compile("shaders/bg.hlsl", s!("ps_5_0"))?;
     let gl_bc = compile("shaders/glass.hlsl", s!("ps_5_0"))?;
@@ -366,21 +352,14 @@ fn make_bg_target(
     device: &ID3D11Device,
     w: u32,
     h: u32,
-) -> Result<(
-    ID3D11Texture2D,
-    ID3D11RenderTargetView,
-    ID3D11ShaderResourceView,
-)> {
+) -> Result<(ID3D11Texture2D, ID3D11RenderTargetView, ID3D11ShaderResourceView)> {
     let desc = D3D11_TEXTURE2D_DESC {
         Width: w,
         Height: h,
         MipLevels: 1,
         ArraySize: 1,
         Format: DXGI_FORMAT_B8G8R8A8_UNORM,
-        SampleDesc: DXGI_SAMPLE_DESC {
-            Count: 1,
-            Quality: 0,
-        },
+        SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0 },
         Usage: D3D11_USAGE_DEFAULT,
         BindFlags: (D3D11_BIND_RENDER_TARGET.0 | D3D11_BIND_SHADER_RESOURCE.0) as u32,
         ..Default::default()
@@ -486,10 +465,7 @@ impl Gfx {
                 Width: w,
                 Height: h,
                 Format: DXGI_FORMAT_B8G8R8A8_UNORM,
-                SampleDesc: DXGI_SAMPLE_DESC {
-                    Count: 1,
-                    Quality: 0,
-                },
+                SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0 },
                 BufferUsage: DXGI_USAGE_RENDER_TARGET_OUTPUT,
                 BufferCount: 2,
                 SwapEffect: DXGI_SWAP_EFFECT_FLIP_DISCARD,
@@ -606,13 +582,11 @@ impl Gfx {
             self.bb_rtv = None;
             self.backbuffer = None;
 
-            self.swapchain
-                .ResizeBuffers(0, w, h, DXGI_FORMAT_UNKNOWN, DXGI_SWAP_CHAIN_FLAG(0))?;
+            self.swapchain.ResizeBuffers(0, w, h, DXGI_FORMAT_UNKNOWN, DXGI_SWAP_CHAIN_FLAG(0))?;
 
             let bb: ID3D11Texture2D = self.swapchain.GetBuffer(0)?;
             let mut rtv = None;
-            self.device
-                .CreateRenderTargetView(&bb, None, Some(&mut rtv))?;
+            self.device.CreateRenderTargetView(&bb, None, Some(&mut rtv))?;
             self.backbuffer = Some(bb);
             self.bb_rtv = rtv;
 
@@ -687,10 +661,7 @@ impl Gfx {
 
         let (sw, sh) = (self.w as f32, self.h as f32);
 
-        let scale = self
-            .config
-            .scale
-            .clamp(Config::MIN_SCALE, Config::MAX_SCALE);
+        let scale = self.config.scale.clamp(Config::MIN_SCALE, Config::MAX_SCALE);
 
         let base_card_size = (sw.min(sh) * CARD_SIZE_FRAC).max(120.0);
 
@@ -739,44 +710,28 @@ impl Gfx {
                         self.cards[0].digit_a.current as f32,
                         self.cards[0].digit_a.next as f32,
                         self.cards[0].digit_a.progress,
-                        if self.cards[0].digit_a.active {
-                            1.0
-                        } else {
-                            0.0
-                        },
+                        if self.cards[0].digit_a.active { 1.0 } else { 0.0 },
                     ],
 
                     roll0_b: [
                         self.cards[0].digit_b.current as f32,
                         self.cards[0].digit_b.next as f32,
                         self.cards[0].digit_b.progress,
-                        if self.cards[0].digit_b.active {
-                            1.0
-                        } else {
-                            0.0
-                        },
+                        if self.cards[0].digit_b.active { 1.0 } else { 0.0 },
                     ],
 
                     roll1_a: [
                         self.cards[1].digit_a.current as f32,
                         self.cards[1].digit_a.next as f32,
                         self.cards[1].digit_a.progress,
-                        if self.cards[1].digit_a.active {
-                            1.0
-                        } else {
-                            0.0
-                        },
+                        if self.cards[1].digit_a.active { 1.0 } else { 0.0 },
                     ],
 
                     roll1_b: [
                         self.cards[1].digit_b.current as f32,
                         self.cards[1].digit_b.next as f32,
                         self.cards[1].digit_b.progress,
-                        if self.cards[1].digit_b.active {
-                            1.0
-                        } else {
-                            0.0
-                        },
+                        if self.cards[1].digit_b.active { 1.0 } else { 0.0 },
                     ],
 
                     ampm_visible: if self.config.time_format == TimeFormat::H12 {
@@ -802,32 +757,25 @@ impl Gfx {
 
             self.ctx.RSSetViewports(Some(&[viewport]));
 
-            self.ctx
-                .IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+            self.ctx.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
             self.ctx.VSSetShader(&self.vs, None);
 
             // PASS 1
             //
             // Aurora + rolling digits -> bg_tex
-            self.ctx
-                .OMSetRenderTargets(Some(&[Some(self.bg_rtv.clone())]), None);
+            self.ctx.OMSetRenderTargets(Some(&[Some(self.bg_rtv.clone())]), None);
 
             self.ctx.PSSetShader(&self.bg_ps, None);
 
-            self.ctx
-                .PSSetConstantBuffers(0, Some(&[Some(self.bg_cb.clone())]));
+            self.ctx.PSSetConstantBuffers(0, Some(&[Some(self.bg_cb.clone())]));
 
             self.ctx.PSSetShaderResources(
                 1,
-                Some(&[
-                    Some(self.digit_atlas.clone()),
-                    Some(self.ampm_atlas.clone()),
-                ]),
+                Some(&[Some(self.digit_atlas.clone()), Some(self.ampm_atlas.clone())]),
             );
 
-            self.ctx
-                .PSSetSamplers(0, Some(&[Some(self.sampler.clone())]));
+            self.ctx.PSSetSamplers(0, Some(&[Some(self.sampler.clone())]));
 
             self.ctx.Draw(3, 0);
 
@@ -838,8 +786,7 @@ impl Gfx {
 
             self.ctx.CopyResource(backbuffer, &self.bg_tex);
 
-            self.ctx
-                .OMSetRenderTargets(Some(&[self.bb_rtv.clone()]), None);
+            self.ctx.OMSetRenderTargets(Some(&[self.bb_rtv.clone()]), None);
 
             // PASS 3
             //
@@ -852,11 +799,9 @@ impl Gfx {
 
             self.ctx.PSSetShader(&self.glass_ps, None);
 
-            self.ctx
-                .PSSetShaderResources(0, Some(&[Some(self.bg_srv.clone())]));
+            self.ctx.PSSetShaderResources(0, Some(&[Some(self.bg_srv.clone())]));
 
-            self.ctx
-                .PSSetSamplers(0, Some(&[Some(self.sampler.clone())]));
+            self.ctx.PSSetSamplers(0, Some(&[Some(self.sampler.clone())]));
 
             for (index, _card) in self.cards.iter().enumerate() {
                 let center_x = card_geometry[index][0];
@@ -887,14 +832,12 @@ impl Gfx {
                     },
                 )?;
 
-                self.ctx
-                    .PSSetConstantBuffers(0, Some(&[Some(self.glass_cb.clone())]));
+                self.ctx.PSSetConstantBuffers(0, Some(&[Some(self.glass_cb.clone())]));
 
                 self.ctx.Draw(3, 0);
             }
 
-            self.ctx
-                .OMSetBlendState(None, Some(&[0.0, 0.0, 0.0, 0.0]), u32::MAX);
+            self.ctx.OMSetBlendState(None, Some(&[0.0, 0.0, 0.0, 0.0]), u32::MAX);
 
             self.ctx.PSSetShaderResources(0, Some(&[None, None]));
 
@@ -911,24 +854,18 @@ impl Gfx {
 
             self.ctx.PSSetShaderResources(
                 1,
-                Some(&[
-                    Some(self.digit_atlas.clone()),
-                    Some(self.ampm_atlas.clone()),
-                ]),
+                Some(&[Some(self.digit_atlas.clone()), Some(self.ampm_atlas.clone())]),
             );
 
-            self.ctx
-                .PSSetSamplers(0, Some(&[Some(self.sampler.clone())]));
+            self.ctx.PSSetSamplers(0, Some(&[Some(self.sampler.clone())]));
 
-            self.ctx
-                .PSSetConstantBuffers(0, Some(&[Some(self.bg_cb.clone())]));
+            self.ctx.PSSetConstantBuffers(0, Some(&[Some(self.bg_cb.clone())]));
 
             self.ctx.Draw(3, 0);
 
             self.ctx.PSSetShaderResources(1, Some(&[None, None]));
 
-            self.ctx
-                .OMSetBlendState(None, Some(&[0.0, 0.0, 0.0, 0.0]), u32::MAX);
+            self.ctx.OMSetBlendState(None, Some(&[0.0, 0.0, 0.0, 0.0]), u32::MAX);
 
             self.swapchain.Present(1, DXGI_PRESENT(0)).ok()
         }
