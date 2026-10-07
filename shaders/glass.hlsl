@@ -40,11 +40,11 @@ float4 main(float4 pos : SV_POSITION) : SV_TARGET
     }
 
     // edge normal from SDF gradient
-    float e = 1.0;
-    float2 grad = float2(
-        roundrect_sdf(p + float2(e, 0)) - roundrect_sdf(p - float2(e, 0)),
-        roundrect_sdf(p + float2(0, e)) - roundrect_sdf(p - float2(0, e)));
-    float2 dir = normalize(grad + 1e-6);
+    float dirLen = length(p);
+
+    float2 dir = dirLen > 1e-5
+        ? p / dirLen
+        : float2(0.0, 0.0);
 
     // refraction
     float glassSize = min(size.x, size.y);
