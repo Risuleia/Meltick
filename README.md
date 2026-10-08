@@ -5,9 +5,11 @@
 # Meltick
 
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Windows-blue)]()
+[![Platform](https://img.shields.io/badge/platform-Windows%2010+-blue)](https://github.com/Risuleia/Meltick/releases/latest)
 
-A liquid glass clock screensaver for Windows.
+[![Release](https://img.shields.io/github/v/release/Risuleia/Meltick)](https://github.com/Risuleia/Meltick/releases/latest)
+
+A liquid glass clock screensaver for Windows, built with [Rust](https://www.rust-lang.org/).
 
 ---
 
@@ -35,6 +37,16 @@ Meltick supports:
 - **Multi-monitor support** — runs independently across connected displays.
 - **Live configuration** — adjust the clock format and scale through the screensaver settings.
 - **Windows screensaver integration** — works directly with the standard Windows screensaver interface.
+
+> **Note on Power Consumption:** Meltick utilizes real-time GPU shaders to achieve its fluid glass deformation effects. As a result, it will draw a moderate amount of GPU power while active, which may affect battery life on laptops.
+
+---
+
+## Installation
+
+1. Download the latest `Meltick.scr` file from the [Releases](https://github.com/Risuleia/Meltick/releases/latest) page.
+2. Right-click the `.scr` file and click **Install**.
+3. Configure settings or set it as your active screensaver in Windows Personalization settings.
 
 ---
 
