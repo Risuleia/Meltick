@@ -13,10 +13,9 @@ A liquid glass clock screensaver for Windows, built with [Rust](https://www.rust
 
 ---
 
-<!-- Demo -->
-<p align="center">
-  <img src="./assets/demo.gif" alt="Meltick demo">
-</p>
+
+https://github.com/user-attachments/assets/29e50b97-bff6-4b97-a684-10db5041f4d1
+
 
 > *Video: Meltick in action*
 
