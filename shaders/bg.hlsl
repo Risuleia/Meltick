@@ -40,7 +40,7 @@ float4 main(float4 pos : SV_POSITION) : SV_TARGET
     float aspect = resolution.x / resolution.y;
     float2 p = float2(uv.x * aspect, uv.y);
 
-        float t = time * 0.35;
+    float t = time * 0.35;
 
     float2 warp = float2(
         fbm(p * 1.3 + float2(t * 0.10, t * 0.05), 3),
@@ -54,22 +54,23 @@ float4 main(float4 pos : SV_POSITION) : SV_TARGET
     float d1 = saturate(1.0 - abs(n1 * 2.0 - 1.0));
     float d2 = saturate(1.0 - abs(n2 * 2.0 - 1.0));
 
-    // sharp core + soft glow, so the filaments have body and color
     float core = pow(d1, 7.0) + 0.7 * pow(d2, 9.0);
-    float glow = pow(d1, 2.5) * 0.12 + pow(d2, 3.0) * 0.08;
+    float glow = pow(d1, 2.5) * 0.10 + pow(d2, 3.0) * 0.06;
 
-    // higher frequency mask => several regions across the whole screen
-    float mask = smoothstep(0.30, 0.60, fbm(p * 2.2 + warp * 0.8 + t * 0.04, 3));
+    // the mask slides along a slow wandering path, so smoke enters from changing sides
+    float2 pan = 3.4 * float2(sin(time * 0.021), cos(time * 0.017));
+    float maskA = smoothstep(0.44, 0.64, fbm(p * 1.4 + pan  + warp * 0.6, 3));
+    float2 pan2 = 3.0 * float2(cos(time * 0.013 + 2.0), sin(time * 0.019 + 4.0));
+    float maskB = smoothstep(0.48, 0.68, fbm(p * 1.1 + pan2 + 17.0 + warp * 0.6, 3));
+    float mask = saturate(max(maskA, maskB * 0.8));
 
-    float intensity = (core * 1.0 + glow) * mask;
+    float intensity = (core + glow) * mask;
 
-    // saturated colors that shift across the screen
     float hue = n1 * 1.2 + warp.y * 1.5 + p.x * 0.35 + t * 0.05;
     float3 hueCol = 0.5 + 0.5 * cos(6.28318 * (hue + float3(0.0, 0.33, 0.67)));
-    hueCol = pow(hueCol, 1.6); // deepen saturation
-    float3 col = intensity * hueCol * 3.2; // gain: brightness
+    hueCol = pow(hueCol, 1.8);
+    float3 col = intensity * hueCol * 3.2;
 
-    // light vignette only
     float2 v = uv - 0.5;
     col *= saturate(1.0 - dot(v, v) * 0.5);
 
@@ -84,7 +85,7 @@ float4 main(float4 pos : SV_POSITION) : SV_TARGET
         float d1 = renderTwoDigits(pos.xy, card1, roll1_a, roll1_b);
         float digit = max(d0, d1);
         digit = max(digit, renderAmPm(pos.xy, card0));
-        col = lerp(col, float3(1.0, 1.0, 1.0), digit * 0.08);
+        col = lerp(col, float3(1.0, 1.0, 1.0), digit * 0.03);
     }
 
     return float4(col, 1.0);
