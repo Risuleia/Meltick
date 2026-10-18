@@ -8,6 +8,7 @@
 [![Platform](https://img.shields.io/badge/platform-Windows%2010+-blue)](https://github.com/Risuleia/Meltick/releases/latest)
 
 [![Release](https://img.shields.io/github/v/release/Risuleia/Meltick)](https://github.com/Risuleia/Meltick/releases/latest)
+[![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/Risuleia/Meltick/total)](https://github.com/Risuleia/Meltick/releases/)
 
 A liquid glass clock screensaver for Windows, built with [Rust](https://www.rust-lang.org/).
 
